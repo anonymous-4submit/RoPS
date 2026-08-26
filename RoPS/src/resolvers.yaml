@@ -1,0 +1,114 @@
+# ──────────────────────────────────────────────────────────────────────────
+#
+#
+#
+#
+#
+#   attribute_resolvers[]
+#
+#
+#
+# ──────────────────────────────────────────────────────────────────────────
+
+attribute_resolvers:
+  - canonical: builtins.getattr
+    aliases: ["__builtin__.getattr", "getattr"]
+    obj: 0
+    name_arg: 1
+
+  - canonical: operator.attrgetter
+    obj: 0
+    name_arg: 1
+    stage3_positions: [0, 1, 2, 3]
+    note: >
+      `attrgetter(*names)` has no object position; every argument is a name. Stage 3
+      therefore treats every position as R2. The Stage 2 (obj, name) model cannot
+      represent this form and approximates it as (0, 1); this mismatch is intentional.
+
+  # ── PickleCloak resolver gadget ──────────────────────────────────────
+  - canonical: test.support.get_attribute
+    obj: 0
+    name_arg: 1
+
+  - canonical: unittest.mock._dot_lookup
+    obj: 0
+    name_arg: 1
+
+  - canonical: xmlrpc.server.resolve_dotted_attribute
+    obj: 0
+    name_arg: 1
+
+  - canonical: lib2to3.fixer_util.attr_chain
+    obj: 0
+    name_arg: 1
+    generator: true
+    note: >
+      This is a generator function defined as
+        def attr_chain(obj, attr):
+            next = getattr(obj, attr)
+            while next: yield next; obj = next; next = getattr(obj, attr)
+      so `next(attr_chain(o, a)) == getattr(o, a)` holds by definition. The resolved
+      identity is deferred until forced evaluation.
+
+  - canonical: numpy.core._ufunc_reconstruct
+    aliases:
+      - "numpy._core._ufunc_reconstruct"
+      - "numpy.core.__init__._ufunc_reconstruct"
+      - "numpy._core.__init__._ufunc_reconstruct"
+    obj: 0
+    name_arg: 1
+    note: >
+      This was temporarily `stage3_role: false` to preserve dev/test separation because
+      the name appeared only in test (3-G). Those generalization measurements were frozen
+      in RQ2 section 9; the restriction is removed for deployment.
+
+  #
+  #   _import_dotted_name('os.system')  →  os.system
+  #
+  #
+  - canonical: torch._utils._import_dotted_name
+    obj: -1
+    name_arg: 0
+
+  - canonical: IPython.utils.importstring.import_item
+    obj: -1
+    name_arg: 0
+
+  - canonical: sympy.utilities.source.get_class
+    obj: -1
+    name_arg: 0
+
+  - canonical: pydoc.locate
+    obj: -1
+    name_arg: 0
+
+module_resolvers:
+  - canonical: importlib.import_module
+    name_arg: 0
+  - canonical: builtins.__import__
+    aliases: ["__builtin__.__import__", "__import__"]
+    name_arg: 0
+  - canonical: importlib._bootstrap._find_and_load
+    name_arg: 0
+    stage3_role: false
+    note: "Internal hook used only for Stage 2 value abstraction."
+
+forcing_primitives:
+  - canonical: builtins.next
+    aliases: ["__builtin__.next", "next"]
+    advances: true
+  - canonical: builtins.iter
+    aliases: ["__builtin__.iter", "iter"]
+    advances: false
+
+stage3_only_name_taking:
+  - canonical: builtins.setattr
+    positions: [1]
+  - canonical: builtins.hasattr
+    positions: [1]
+  - canonical: operator.getitem
+    positions: [1]
+  - canonical: operator.itemgetter
+    positions: [0, 1, 2, 3]
+  - canonical: operator.methodcaller
+    positions: [0]

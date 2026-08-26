@@ -1,0 +1,22 @@
+# Local environment
+.env
+
+# Restored dataset (hosted externally; see data/DATASET.md)
+/data/data/
+rops_dataset/
+
+# Regenerated result tables (produced by the reproduction; frozen *_final.jsonl
+# are the source of truth and ARE tracked)
+evaluation/RQ*/RQ*_results.xlsx
+evaluation/RQ*/RQ*_denylist.xlsx
+
+# Re-measurement intermediates (produced by run_*.py --remeasure)
+evaluation/RQ*/data/rops_remeasured.jsonl
+evaluation/RQ*/data/rfp_remeasured.jsonl
+evaluation/RQ*/data/rq2_results_remeasured.jsonl
+evaluation/RQ*/data/rq3_redesign_remeasured.jsonl
+
+# Python / OS cruft
+__pycache__/
+*.pyc
+.DS_Store

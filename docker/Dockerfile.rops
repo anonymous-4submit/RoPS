@@ -1,0 +1,26 @@
+# RoPS reproduction image.
+#
+# RoPS is a static analyzer: it carves and inspects bytes and simulates the
+# unpickling machine. It never loads models, so no PyTorch or ML libraries are
+# needed — the image stays small and payloads are never executed.
+FROM python:3.11-slim
+
+# Build deps for yara-python; removed after the wheel is built/installed.
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends gcc libyara-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# RoPS runtime deps (yara-python, pyyaml, numpy, lz4) + openpyxl for tables.
+COPY RoPS/src/requirements.txt /tmp/rops-requirements.txt
+RUN pip install --no-cache-dir -r /tmp/rops-requirements.txt openpyxl
+
+# The repository is bind-mounted at /work by docker-compose, so the tool source,
+# evaluation scripts, and result files are all editable without a rebuild.
+# RoPS is imported as top-level packages (extractor / detector / classifier).
+ENV PYTHONPATH=/work/RoPS/src
+WORKDIR /work
+
+COPY docker/entrypoint.sh /usr/local/bin/entrypoint.sh
+RUN chmod +x /usr/local/bin/entrypoint.sh
+ENTRYPOINT ["/usr/local/bin/entrypoint.sh"]
+CMD ["bash"]

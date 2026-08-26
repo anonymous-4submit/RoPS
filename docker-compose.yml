@@ -1,0 +1,94 @@
+# RoPS reproduction services.
+#
+# Tier 0 (rq*-table)     regenerate result tables from the frozen *_final.jsonl.
+#                        Needs nothing but this repository.
+# Tier 1 (rq1/rq2/rq3)   re-run RoPS over the mounted dataset, overlay its fresh
+#                        measurements on the frozen baseline/oracle inputs, and
+#                        rebuild the table. Needs ROPS_DATASET set (.env).
+# rq*-rebuild            Tier 0.5: rebuild from the frozen RoPS outputs without
+#                        re-running RoPS (no dataset needed).
+# verify-dataset         check a restored dataset against the ledger (SHA-256).
+# rops                   interactive shell for ad-hoc analysis.
+#
+# Baseline tools (picklescan, modelscan, fickling, weights-only) are NOT run
+# here; their verdicts are shipped inside evaluation/RQ*/data/. Full baseline
+# re-measurement is described in docs/REPRODUCE.md. RoPS is static and never
+# loads a model, so re-running it over malicious artifacts executes no payload.
+
+x-rops: &rops
+  build:
+    context: .
+    dockerfile: docker/Dockerfile.rops
+  image: rops:latest
+  working_dir: /work
+  volumes:
+    - .:/work
+
+services:
+  # ---- base image / interactive shell -------------------------------------
+  rops:
+    <<: *rops
+    command: ["bash"]
+
+  # ---- Tier 0: tables from frozen results (seconds, no dataset) ------------
+  rq1-table:
+    <<: *rops
+    command: ["python3", "evaluation/RQ1/rq1_table.py",
+              "--final", "evaluation/RQ1/rq1_final.jsonl",
+              "--out",   "evaluation/RQ1/RQ1_results.xlsx"]
+  rq2-table:
+    <<: *rops
+    command: ["python3", "evaluation/RQ2/rq2_table.py",
+              "--final", "evaluation/RQ2/rq2_final.jsonl",
+              "--out",   "evaluation/RQ2/RQ2_denylist.xlsx"]
+  rq3-table:
+    <<: *rops
+    command: ["python3", "evaluation/RQ3/rq3_table.py",
+              "--final", "evaluation/RQ3/rq3_final.jsonl",
+              "--out",   "evaluation/RQ3/RQ3_results.xlsx"]
+
+  # ---- Tier 1: re-run RoPS over the dataset, then rebuild results ----------
+  # Re-executes RoPS (static; loads no models) over the mounted dataset to
+  # regenerate its own measurements, overlays them on the frozen baseline/oracle
+  # inputs, and rebuilds the table. Needs ROPS_DATASET set (.env).
+  rq1:
+    <<: *rops
+    volumes:
+      - .:/work
+      - ${ROPS_DATASET:?set ROPS_DATASET in .env (see data/DATASET.md)}:/data:ro
+    command: ["python3", "evaluation/RQ1/run_rq1.py", "--remeasure", "--dataset", "/data"]
+  rq2:
+    <<: *rops
+    volumes:
+      - .:/work
+      - ${ROPS_DATASET:?set ROPS_DATASET in .env (see data/DATASET.md)}:/data:ro
+    command: ["python3", "evaluation/RQ2/run_rq2.py", "--remeasure", "--dataset", "/data"]
+  rq3:
+    <<: *rops
+    volumes:
+      - .:/work
+      - ${ROPS_DATASET:?set ROPS_DATASET in .env (see data/DATASET.md)}:/data:ro
+    command: ["python3", "evaluation/RQ3/run_rq3.py", "--remeasure", "--dataset", "/data"]
+
+  # ---- Tier 0.5: rebuild results from frozen raw inputs (no dataset) -------
+  # Same as Tier 1 but without re-running RoPS: re-aggregates the frozen RoPS
+  # outputs. Useful to check the aggregation without the dataset.
+  rq1-rebuild:
+    <<: *rops
+    command: ["python3", "evaluation/RQ1/run_rq1.py"]
+  rq2-rebuild:
+    <<: *rops
+    command: ["python3", "evaluation/RQ2/run_rq2.py"]
+  rq3-rebuild:
+    <<: *rops
+    command: ["python3", "evaluation/RQ3/run_rq3.py"]
+
+  # ---- dataset integrity check (SHA-256 of restored files vs. ledger) ------
+  verify-dataset:
+    <<: *rops
+    volumes:
+      - .:/work
+      - ${ROPS_DATASET:?set ROPS_DATASET in .env (see data/DATASET.md)}:/data:ro
+    command: ["python3", "data/verify_dataset.py",
+              "--root",   "/data",
+              "--ledger", "data/master_ledger.csv"]

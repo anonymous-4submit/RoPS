@@ -1,0 +1,803 @@
+# ────────────────────────────────────────────────────────────────────
+# ────────────────────────────────────────────────────────────────────
+
+# ------------------------------------------------------------------
+# ------------------------------------------------------------------
+scan:
+  ent_threshold: 4.5
+  slice_lookback: 20
+  context_padding: 5
+
+  #
+  #
+  #
+  #
+  enable_denylist: true
+
+# ------------------------------------------------------------------
+# ------------------------------------------------------------------
+shell_detection:
+  min_len: 12
+  score_threshold: 2
+  meets_condition_ent_threshold: 5.0
+
+# ------------------------------------------------------------------
+#
+# ---------
+#
+#
+#
+#
+# ------------------------------------------------------------------
+python_detection:
+  min_len: 6
+  score_threshold: 2
+
+# ------------------------------------------------------------------
+#
+# ------------------------------------------------------------------
+content_signals:
+  binary_non_ascii_threshold: 0.30
+  binary_min_len: 64
+  non_ascii_meta_cutoff: 0.20
+
+  #
+  #
+  literal_scan_max_len: 16384
+
+# ------------------------------------------------------------------
+#
+#
+# (PERF_AND_SIGNAL_FINDINGS.md §3)
+#
+# ------------------------------------------------------------------
+structural_signals:
+  - name: has_shell_substitution
+    flags: "X"
+    pattern: |
+      (?x)
+      (?:
+          `[^`\n]{1,200}`
+        | \$\([^)\n]{0,200}\)
+        | \$\{\w{1,64}\}
+        | \$[A-Za-z_]\w{0,63}
+      )
+
+  - name: has_windows_path
+    flags: "IX"
+    pattern: |
+      (?ix)
+      (?:
+          (?:^|[\s"',;(\[])[A-Za-z]:[\\/]
+        | \\\\[A-Za-z0-9._-]{1,64}\\
+        | [A-Za-z0-9._-]{1,64}\\[A-Za-z0-9._-]{1,64}\\
+      )
+
+  - name: has_serialized_config
+    flags: "X"
+    pattern: |
+      (?x)
+      \{\s*["'][A-Za-z_][\w.-]{0,63}["']\s*:
+
+  #
+  #
+  #
+  - name: has_path_traversal
+    flags: "IX"
+    pattern: |
+      (?ix)
+      (?:\.\.[/\\])+
+      (?:
+          tmp|etc|proc|sys|dev|boot|sbin|root|
+          windows|winnt|system32|programdata|
+          \.ssh|\.aws|\.gnupg|\.docker|\.kube
+      )
+      (?:[/\\]|$)
+
+# ------------------------------------------------------------------
+# ------------------------------------------------------------------
+dangerous_callables:
+  - "os.system"
+  - "os.popen"
+  - "os.execv"
+  - "os.execve"
+  - "os.execvp"
+  - "os.execvpe"
+  - "subprocess.run"
+  - "subprocess.call"
+  - "subprocess.check_call"
+  - "subprocess.check_output"
+  - "subprocess.Popen"
+  - "eval"
+  - "exec"
+  - "compile"
+  - "__import__"
+  - "builtins.eval"
+  - "builtins.exec"
+  - "builtins.__import__"
+  - "commands.getoutput"
+  - "commands.getstatusoutput"
+  - "pty.spawn"
+  - "__builtin__.eval"
+  - "__builtin__.exec"
+  - "__builtin__.execfile"
+  - "__builtin__.compile"
+  - "__builtin__.__import__"
+  - "__builtin__.open"
+  - "importlib.import_module"
+  - "importlib._bootstrap._find_and_load"
+  - "runpy._run_code"
+  - "runpy.run_module"
+  - "runpy.run_path"
+  - "pickle.load"
+  - "dill.loads"
+  - "dill.load"
+  - "shelve.open"
+  - "jsonpickle.decode"
+  - "pandas.read_pickle"
+  - "marshal.load"
+  - "urllib.request.urlopen"
+  - "urllib.request.urlretrieve"
+  - "urllib.request.URLopener"
+  - "six.moves.urllib.request.urlopen"
+  - "telnetlib.Telnet"
+  - "ftplib.FTP"
+  - "xmlrpc.client.ServerProxy"
+  - "xmlrpc.client.Server"
+  - "asyncio.unix_events._UnixSubprocessTransport"
+  - "distutils.spawn.spawn"
+  - "cProfile.run"
+  - "cProfile.runctx"
+  - "cProfile.Profile.run"
+  - "cProfile.Profile.runctx"
+  - "profile.run"
+  - "profile.runctx"
+  - "profile.Profile.run"
+  - "profile.Profile.runctx"
+  - "trace.Trace.run"
+  - "trace.Trace.runctx"
+  - "pydoc.pipepager"
+  - "pydoc.locate"
+  - "pydoc.safeimport"
+  - "pydoc.tempfilepager"
+  - "logging.config._install_handlers"
+  - "logging.config._resolve"
+  - "unittest.loader.TestLoader._get_module_from_name"
+  - "unittest.mock._importer"
+  - "numpy.f2py.capi_maps.getinit"
+  - "numpy.f2py.crackfortran.myeval"
+  - "numpy.f2py.crackfortran._eval_scalar"
+  - "numpy.distutils.exec_command._exec_command"
+  - "numpy.distutils.cpuinfo.getoutput"
+  - "numpy.distutils.cpuinfo.command_by_line"
+  - "numpy.distutils.misc_util.get_cmd"
+  - "sympy.sympify"
+  - "sympy.utilities.lambdify.lambdify"
+  - "sympy.parsing.sympy_parser.eval_expr"
+  - "code.InteractiveInterpreter.runcode"
+  - "idlelib.run.Executive.runcode"
+  - "idlelib.calltip.get_entity"
+  - "idlelib.autocomplete.AutoComplete.get_entity"
+  - "cgitb.lookup"
+  - "uuid._get_command_stdout"
+  - "dataclasses._create_fn"
+  - "_osx_support._read_output"
+  - "xml.etree.ElementTree.ElementTree.write"
+  - "xml.etree.ElementTree._serialize_xml"
+  - "xml.etree.ElementTree._serialize_html"
+  - "numpy.savetxt"
+  - "numpy.lib.npyio.savetxt"
+  - "numpy.save"
+  - "numpy.savez"
+  - "distutils.file_util.write_file"
+  - "distutils.file_util._copy_file_contents"
+  - "distutils.tests.support.TempdirManager.write_file"
+  - "test.support.script_helper.make_script"
+  - "tracemalloc.Snapshot.dump"
+  - "profile.Profile.dump_stats"
+  - "pipes.Template.open_w"
+  - "http.cookiejar.LWPCookieJar.save"
+  - "mailbox._create_carefully"
+  - "urllib.request.URLopener.open"
+  - "urllib.request.URLopener.retrieve"
+  - "urllib.request.FileHandler.open_local_file"
+  - "argparse.FileType.__call__"
+  - "xml.dom.pulldom.parse"
+  - "xml.sax.saxutils.prepare_input_source"
+  - "xml.etree.ElementInclude.default_loader"
+  - "numpy.memmap"
+  - "numpy.load"
+  - "numpy.loadtxt"
+  - "numpy.lib.npyio.loadtxt"
+  - "numpy.ma.mrecords.openfile"
+  - "numpy.distutils.conv_template.resolve_includes"
+  - "pandas.io.common.get_handle"
+  - "pandas.io.parsers.readers.read_csv"
+  - "pandas.io.parsers.readers.read_table"
+  - "pandas.io.parsers.readers.read_fwf"
+  - "pandas.read_csv"
+  - "pandas.read_table"
+  - "pandas.read_pickle"
+  - "pipes.Template.open_r"
+  - "shlex.shlex.sourcehook"
+  - "mailbox.MH.get_bytes"
+  - "mailbox.MH.get_file"
+  - "pydoc._url_handler"
+  - "pkgutil.ImpLoader.get_data"
+
+# ------------------------------------------------------------------
+# ------------------------------------------------------------------
+bytes_detection:
+  min_size: 16
+  entropy_threshold: 6.0
+
+# ------------------------------------------------------------------
+# ------------------------------------------------------------------
+bytes_dangerous_callables:
+  - "zlib.decompress"
+  - "zlib.decompress_obj"
+  - "pickle.loads"
+  - "pickle.load"
+  - "_pickle.loads"
+  - "marshal.loads"
+  - "marshal.load"
+  - "dill.loads"
+  - "dill.load"
+  - "base64.b64decode"
+  - "base64.decodebytes"
+  - "base64.decodestring"    # Python 2
+  - "binascii.a2b_base64"
+  - "codecs.decode"
+  - "numpy.load"
+
+# ------------------------------------------------------------------
+# ------------------------------------------------------------------
+patterns:
+
+  # ----------------------------------------------------------------
+  # ----------------------------------------------------------------
+  shortcut:
+    - name: SHORT_SHELL_CMD_RE
+      flags: "IX"
+      pattern: |
+        (?ix)
+        ^\s*
+        (?:
+            echo\s+.+ |
+            ls(?:\s+-[A-Za-z]+)*(?:\s+(?:[~/]\S*|\.{1,2}[/\\]\S*))* |
+            id |
+            whoami |
+            uname(?:\s+-[a-z]+)? |
+            pwd |
+            touch(?:\s+.+)? |
+            [a-z0-9][a-z0-9_.-]{0,63}\.exe(?:\s+.+)? |
+            date
+        )
+        \s*$
+
+  # ----------------------------------------------------------------
+  # ----------------------------------------------------------------
+  scored:
+
+    - name: SHELL_CMD_RE
+      score: 1
+      is_strong: false
+      flags: "IX"
+      pattern: |
+        (?ix)
+        (?:^|[\s"'`({\[]|;|&&|\|\|)
+        (?:
+            curl|wget|nc|netcat|ssh|scp|socat|
+            bash|sh|zsh|fish|
+            chmod|chown|rm|mv|cp|cat|echo|find|touch|
+            perl|python(?:3)?|node|ruby|
+            apt(?:-get)?|yum|dnf|pacman|brew|
+            powershell|pwsh|cmd(?:\.exe)?|
+            certutil(?:\.exe)?|bitsadmin(?:\.exe)?|msiexec(?:\.exe)?|
+            regsvr32(?:\.exe)?|rundll32(?:\.exe)?|mshta(?:\.exe)?|
+            wmic(?:\.exe)?|schtasks(?:\.exe)?|reg(?:\.exe)?|
+            awk|xargs|vim|vi|nmap|env|tee|dd|
+            # LOLBAS — Script Host
+            wscript(?:\.exe)?|cscript(?:\.exe)?|
+            installutil(?:\.exe)?|regasm(?:\.exe)?|regsvcs(?:\.exe)?|odbcconf(?:\.exe)?|
+            desktopimgdownldr(?:\.exe)?|ieexec(?:\.exe)?|esentutl(?:\.exe)?|
+            forfiles(?:\.exe)?|pcalua(?:\.exe)?|diskshadow(?:\.exe)?|
+            [a-z0-9][a-z0-9_.-]{0,63}\.exe|
+            #
+            #
+            (?:
+                git|twine|pip3?|
+                systemctl|supervisorctl|systeminfo|
+                netsh|nslookup|dig|ifconfig|
+                lspci|sysctl|pgrep|pkill|
+                xattr|pyinstaller
+            )(?=\s+\S)|
+            (?:
+                git|twine|pip3?|
+                systemctl|supervisorctl|systeminfo|
+                netsh|nslookup|dig|ifconfig|
+                lspci|sysctl|pgrep|pkill|
+                xattr|pyinstaller
+            )[|;&]\S*(?=\s|$)|
+            7za?(?=\s+(?:[axeudlt]\b|-))|
+            start\s+\S+\.(?:exe|bat|cmd|vbs|ps1|scr|js)|
+            shutdown\s+[-/]\w|
+            #
+            #
+            #
+            (?:
+                mkdir|rmdir|printf|mkfifo|mknod|readlink|realpath|basename|dirname|
+                chgrp|umask|nohup|killall|getent|logname|uptime|
+                gzip|gunzip|bzip2|bunzip2|unzip|cpio|shred|truncate|install|
+                sed|grep|egrep|fgrep|seq|sleep|timeout|
+                tar|wc|du|df|ln|od|nl|split|stat|sync|nice|tr|
+                head|tail|sort|cut|paste|comm|fold|uniq|join|yes|wait|last|who
+            )
+            (?=\s+(?:[-/%$~]|["']|\S*[/\\=.]))
+        )
+        (?:\s+|$)
+
+    - name: SHELL_INTERPRETER_C_RE
+      score: 2
+      is_strong: false
+      flags: "IX"
+      pattern: |
+        (?ix)
+        (?:^|[\s"'`({\[]|;|&&|\|\|)
+        (?:
+            python(?:3)?|perl|node|ruby|bash|sh|zsh|
+            pwsh|powershell
+        )
+        \s*-\s*c
+        (?:\s+|$)
+
+    - name: SHELL_META_RE
+      score: 1
+      is_strong: false
+      flags: "X"
+      pattern: |
+        (?x)
+        (?:\|\||&&|>>|<<|[|]|[<>]|
+           \$\(|`.+?`|\$\{[^}]+\}|
+           \$\w+|
+           \%\w+\%|
+           \^|
+           \r?\n
+        )
+
+    - name: SHELL_PATH_HINT_RE
+      score: 1
+      is_strong: false
+      flags: "IX"
+      pattern: |
+        (?ix)
+        (?:
+            /tmp/|/bin/|/usr/bin/|/etc/|
+            \.bashrc|\.zshrc|
+            /dev/tcp/|
+            \\windows\\system32\\|
+            \\windows\\syswow64\\|
+            \\users\\public\\|
+            \\programdata\\|
+            \\temp\\|\\appdata\\local\\temp\\
+        )
+
+    - name: NATIVE_LIB_PATH_RE
+      score: 2
+      is_strong: true
+      flags: "IX"
+      pattern: |
+        (?ix)
+        [^\s'"/\\]{0,200}\.(?:so|dll|dylib)(\.[0-9]+)?\b
+
+    - name: POWERSHELL_CRADLE_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \b(powershell|pwsh)\b
+        (?:
+            .{0,200}\b(net\.webclient)\b.{0,200}\b(downloadstring|downloadfile)\b
+          |
+            .{0,200}\b(invoke-webrequest|invoke-restmethod|\biwr\b|\birm\b)\b
+        )
+        .{0,300}\b(iex|invoke-expression)\b
+
+    - name: POWERSHELL_STEALTH_OPTS_RE
+      score: 2
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \b(powershell|pwsh)\b
+        .{0,200}\B-\s*(enc|encodedcommand)\b
+        |
+        \b(powershell|pwsh)\b
+        .{0,200}\B-\s*(nop|noprofile|w\s*hidden|windowstyle\s*hidden|noni|noninteractive)\b
+
+    - name: SVCHOST_TYPO_RE
+      score: 3
+      is_strong: true
+      allowlist_ref: SVCHOST_LEGIT_PATH_RE
+      flags: "IX"
+      pattern: |
+        (?ix)
+        \b(svch0st|svh0st|svhost|svchst|svchot|svchostexe)\.exe\b
+
+    - name: LOLBIN_CERTUTIL_URLCACHE_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bcertutil(?:\.exe)?\b
+        .{0,200}\B-\s*(urlcache|verifyctl)\b
+        .{0,200}\B-\s*f\b
+        .{0,300}https?://
+
+    - name: LOLBIN_BITSADMIN_TRANSFER_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bbitsadmin(?:\.exe)?\b
+        .{0,200}\B/\s*transfer\b
+        .{0,200}\B/\s*download\b
+        .{0,400}https?://
+
+    - name: LOLBIN_BITSADMIN_JOBCHAIN_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bbitsadmin(?:\.exe)?\b
+        .{0,400}\B/\s*(create|addfile|resume|complete|setnotifycmdline|reset)\b
+
+    - name: LOLBIN_MSIEXEC_REMOTE_TRANSFORM_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bmsiexec(?:\.exe)?\b
+        .{0,300}\b/i\b
+        .{0,400}\btransforms\s*=\s*["']?https?://[^"'\s]+\.mst["']?
+
+    - name: LOLBIN_REGSVR32_SCT_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bregsvr32(?:\.exe)?\b
+        .{0,300}\b/i:\s*https?://[^\s"']+\.sct\b
+        .{0,300}\bscrobj\.dll\b
+
+    - name: LOLBIN_RUNDLL32_JS_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \brundll32(?:\.exe)?\b
+        .{0,400}javascript:
+        .{0,400}getobject\(\s*["']script:https?://
+
+    - name: GTFO_BASH_DEVTCP_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bbash\b
+        .{0,120}\B-\s*c\b
+        .{0,600}/dev/tcp/[^/\s]+/\d+
+
+    - name: GTFO_SOCAT_EXEC_SH_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bsocat\b
+        .{0,500}\b(exec:/bin/sh)\b
+
+    - name: GTFO_FIND_EXEC_SH_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bfind\b
+        .{0,500}\B-\s*exec\b
+        .{0,200}(?:/bin/sh|sh)\b
+
+
+    - name: GTFO_AWK_SYSTEM_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bawk\b
+        .{0,300}BEGIN\s*\{
+        .{0,300}(?:system\s*\(|"/bin/sh"|"/bin/bash"|cmd\s*\()
+
+    - name: GTFO_XARGS_SHELL_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bxargs\b
+        .{0,200}\B-\s*[Ii]\b
+        .{0,200}(?:bash|sh|zsh)\s+-c\b
+
+    - name: GTFO_VIM_EXEC_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bvi(?:m)?\b
+        .{0,300}(?:-c\s+['"]?\s*:\s*!\s*|:silent\s*!\s*|:system\s*\()
+
+    - name: GTFO_NMAP_EXEC_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bnmap\b
+        .{0,400}(?:--script-exec\b|--script\s*=\s*\S*exec|-e\s+/bin/)
+
+
+    - name: LOLBIN_WSCRIPT_CSCRIPT_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \b(?:wscript|cscript)(?:\.exe)?\b
+        .{0,400}(?:\.(?:vbs|js|jse|vbe|wsf)\b|//e:(?:jscript|vbscript)|//b\b|/b\b)
+
+    - name: LOLBIN_MSHTA_EXEC_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bmshta(?:\.exe)?\b
+        .{0,400}(?:vbscript:|javascript:|https?://[^\s"']+\.hta\b)
+
+    - name: LOLBIN_FORFILES_CMD_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bforfiles(?:\.exe)?\b
+        .{0,400}/c\b
+        .{0,200}cmd\b
+
+    - name: LOLBIN_ODBCCONF_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bodbcconf(?:\.exe)?\b
+        .{0,300}(?:/a\b|/f\b)
+        .{0,200}(?:REGSVR|\.dll\b)
+
+    - name: LOLBIN_INSTALLUTIL_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bInstallUtil(?:\.exe)?\b
+        .{0,200}(?:/U\b|/uninstall\b)
+
+    - name: LOLBIN_REGASM_REGSVCS_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \b(?:regasm|regsvcs)(?:\.exe)?\b
+        .{0,200}(?:/U\b|/uninstall\b|/codebase\b)
+
+    - name: LOLBIN_DESKTOPIMGDOWNLDR_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bdesktopimgdownldr(?:\.exe)?\b
+        .{0,200}/lockscreenurl\s*:
+        .{0,300}https?://
+
+    - name: LOLBIN_IEEXEC_RE
+      score: 3
+      is_strong: true
+      flags: "IXS"
+      pattern: |
+        (?isx)
+        \bieexec(?:\.exe)?\b
+        .{0,200}https?://
+
+  # ----------------------------------------------------------------
+  # ----------------------------------------------------------------
+  allowlist:
+    - name: SVCHOST_LEGIT_PATH_RE
+      flags: "IX"
+      pattern: |
+        (?ix)
+        \\windows\\system32\\svchost\.exe\b
+
+  # ================================================================
+  #
+  # ================================================================
+
+  python_shortcut:
+    - name: PY_EXEC_GATEWAY_CALL_RE
+      flags: "IX"
+      pattern: |
+        (?x)
+        \b(?:eval|exec|execfile|compile|__import__)\s*\(
+
+    - name: PY_OS_EXEC_CALL_RE
+      flags: "X"
+      pattern: |
+        (?x)
+        \b(?:
+            os\.(?:system|popen|execv[pe]{0,2}|spawn[lv]p?e?)
+          | subprocess\.(?:run|call|check_call|check_output|Popen|getoutput)
+          | pty\.spawn
+          | commands\.get(?:status)?output
+        )\s*\(
+
+    - name: PY_SANDBOX_ESCAPE_CHAIN_RE
+      flags: "X"
+      pattern: |
+        (?x)
+        __(?:class|base|bases|mro|subclasses|globals|builtins|import__|
+            reduce__|reduce_ex__|getattr__|code__|closure__)__
+
+  python_scored:
+
+    #
+    - name: PY_CALL_SYNTAX_RE
+      score: 1
+      is_strong: false
+      flags: "X"
+      pattern: |
+        (?x)
+        [A-Za-z_][A-Za-z0-9_]{0,64}\s{0,8}\(
+
+    - name: PY_STMT_STRUCTURE_RE
+      score: 1
+      is_strong: false
+      flags: "MX"
+      pattern: |
+        (?mx)
+        (?:
+            \n[ \t]+\S
+          | ;\s*[A-Za-z_]                                  # a=1; b=2
+          | ^\s*(?:if|for|while|def|class|try|except|
+                  finally|with|elif|else)\b[^\n]*:
+        )
+
+    - name: PY_IMPORT_STMT_RE
+      score: 2
+      is_strong: true
+      flags: "MX"
+      pattern: |
+        (?mx)
+        ^\s*(?:
+            import\s+[A-Za-z_][\w.]*
+          | from\s+[A-Za-z_][\w.]*\s+import\s+
+        )
+
+    - name: PY_RISKY_MODULE_ATTR_RE
+      score: 2
+      is_strong: false
+      flags: "X"
+      pattern: |
+        (?x)
+        \b(?:os|sys|socket|subprocess|shutil|ctypes|marshal|
+             pickle|dill|base64|codecs|binascii|pty|platform|
+             tempfile|glob|urllib|requests|http|ftplib|telnetlib|
+             smtplib|threading|multiprocessing|signal|resource)
+        \s*\.\s*[A-Za-z_]
+
+    - name: PY_INDIRECTION_RE
+      score: 3
+      is_strong: true
+      flags: "X"
+      pattern: |
+        (?x)
+        (?:
+            \bgetattr\s*\([^)]{0,120}\bgetattr\s*\(
+          | \bgetattr\s*\(\s*__import__\s*\(
+          | \bvars\s*\(\s*\)\s*\[
+          | \bglobals\s*\(\s*\)\s*\[
+          | \bbuiltins\s*\.\s*__dict__\s*\[
+        )
+
+    - name: PY_CHAR_OBFUSCATION_RE
+      score: 3
+      is_strong: true
+      flags: "X"
+      pattern: |
+        (?x)
+        (?:
+            \bchr\s*\(\s*\d+\s*\)\s*\+                     # chr(104)+chr(105)
+          | ['"]\s*\.\s*join\s*\(\s*\[?\s*chr\s*\(
+          | \[\s*::\s*-\s*1\s*\]                           # "dmc"[::-1]
+          | \bbytes\s*\(\s*\[\s*\d+\s*,\s*\d+
+          | (?:\\x[0-9a-fA-F]{2}){6,}                      # \x68\x65\x6c...
+          | (?:\\[0-7]{3}){6,}
+        )
+
+    - name: PY_ENCODED_PAYLOAD_RE
+      score: 2
+      is_strong: true
+      flags: "IX"
+      pattern: |
+        (?ix)
+        (?:
+            base64\s*\.\s*(?:b64decode|b32decode|b16decode|a85decode|decodebytes|decodestring)
+          | binascii\s*\.\s*(?:a2b_base64|unhexlify)
+          | bytes\s*\.\s*fromhex\s*\(
+          | codecs\s*\.\s*decode\s*\(
+          | \.\s*decode\s*\(\s*['"](?:base64|hex|rot13|zlib|bz2)
+          | zlib\s*\.\s*decompress\s*\(
+          | marshal\s*\.\s*loads?\s*\(
+        )
+
+    - name: PY_FILE_WRITE_RE
+      score: 2
+      is_strong: false
+      flags: "X"
+      pattern: |
+        (?x)
+        \bopen\s*\([^)]{0,200}['"][rwax]?[wax]\+?b?['"]
+
+    - name: PY_ASSIGN_RE
+      score: 1
+      is_strong: false
+      flags: "X"
+      pattern: |
+        (?x)
+        \b[A-Za-z_][A-Za-z0-9_]*\s*=(?!=)\s*\S
+
+    - name: PY_INNER_STRING_RE
+      score: 1
+      is_strong: false
+      flags: "X"
+      pattern: |
+        (?x)
+        (?:'[^']{4,}'|"[^"]{4,}")
+
+    - name: PY_LAMBDA_RE
+      score: 3
+      is_strong: true
+      flags: "X"
+      pattern: |
+        (?x)
+        \blambda\b\s{0,8}[\w, ]{0,128}:
+
+    #
+    - name: PY_CODE_STRING_RE
+      score: 2
+      is_strong: false
+      flags: "X"
+      pattern: |
+        (?x)
+        [A-Za-z_]\w{0,64}\s{0,8}\([^()]{0,500}\)
+

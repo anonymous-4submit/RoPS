@@ -1,0 +1,8 @@
+pyyaml>=6.0
+yara-python>=4.3.0
+
+# Optional — required only if analysing SafeTensors / HDF5 / numpy-format models
+numpy>=1.21.0
+
+# Optional — required only if analysing lz4-compressed archives
+lz4>=4.0.0

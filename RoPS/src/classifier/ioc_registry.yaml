@@ -1,0 +1,474 @@
+# ══════════════════════════════════════════════════════════════════════════
+#
+#
+# ══════════════════════════════════════════════════════════════════════════
+version: 1
+measured_on: "Top/data 229 files (benign 217 / malicious 12); 492 hits (benign 480 / malicious 12), 2026-08-15"
+
+# ──────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────
+literal_ioc:
+  standalone:
+    - tag: pickle_magic
+      benign: 0
+      malicious: 1
+      category: "Code Execution"
+      subcategory: "Nested Pickle Execution"
+    - tag: pickle_magic_p0
+      benign: 0
+      malicious: 1
+      category: "Code Execution"
+      subcategory: "Nested Pickle Execution"
+    - tag: has_shell_pattern
+      benign: 0
+      malicious: 1
+      category: "Code Execution"
+      subcategory: "OS Command Execution"
+    - tag: has_path_traversal
+      benign: 0
+      malicious: 1
+      category: "File System Access"
+      subcategory: "Path Traversal"
+
+  combination_required:
+    #
+    #
+    - tag: has_url
+      benign: 2
+      malicious: 3
+      combination_category: "Network Connection"
+      combination_subcategory: "Embedded URL Literal"
+    - tag: has_python_code
+      benign: 190
+      malicious: 6
+      #
+      #
+      #     (`AGPL-3.0 License (https://...)`, `metrics/precision(B)`)
+      #
+      #   PY_CALL_SYNTAX ∧ PY_CODE_STRING ∧ PY_INNER_STRING
+      # (FILE_WRITE / STMT_STRUCTURE / ASSIGN / IMPORT_STMT+RISKY_MODULE_ATTR).
+      #
+      #
+      #
+      #
+      rule_tiers:
+        - min_rules: 4
+          require: [PY_CALL_SYNTAX_RE, PY_CODE_STRING_RE, PY_INNER_STRING_RE]
+          qualification: standalone
+          benign: 0
+          malicious: 35
+          category: "Code Execution"
+          subcategory: "Embedded Python Source"
+        - min_rules: 3
+          require: [PY_CALL_SYNTAX_RE, PY_CODE_STRING_RE, PY_INNER_STRING_RE]
+          qualification: combination_required
+          benign: 0
+          malicious: 2
+          combination_category: "Code Execution"
+          combination_subcategory: "Embedded Python Source"
+    - tag: has_path
+      benign: 197
+      malicious: 1
+    - tag: has_windows_path
+      benign: 47
+      malicious: 0
+    - tag: "entropy>="
+      benign: 2
+      malicious: 2
+
+  disqualified:
+    - tag: has_shell_substitution
+      benign: 218
+      malicious: 0
+      note: "A dollar sign followed by an ASCII letter; effectively certain to occur in binary data."
+    - tag: entropy_binary_data
+      benign: 190
+      malicious: 0
+    - tag: literal_truncated
+      benign: 118
+      malicious: 0
+
+# ──────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────
+callable_ioc:
+  standalone:
+    - name: builtins.eval
+      benign: 0
+      malicious: 3
+      category: "Code Execution"
+      subcategory: "Dynamic Code Execution"
+    - name: builtins.exec
+      benign: 0
+      malicious: 2
+      category: "Code Execution"
+      subcategory: "Dynamic Code Execution"
+    - name: builtins.compile
+      benign: 0
+      category: "Code Execution"
+      subcategory: "Dynamic Code Execution"
+    - name: builtins.__import__
+      benign: 0
+      category: "Code Execution"
+      subcategory: "Dynamic Module Import"
+    - name: importlib.import_module
+      benign: 0
+      malicious: 1
+      category: "Code Execution"
+      subcategory: "Dynamic Module Import"
+    - name: os.system
+      benign: 0
+      malicious: 1
+      category: "Code Execution"
+      subcategory: "OS Command Execution"
+    - name: os.popen
+      benign: 0
+      category: "Code Execution"
+      subcategory: "OS Command Execution"
+    - name: subprocess.Popen
+      benign: 0
+      category: "Code Execution"
+      subcategory: "Process Spawning"
+    - name: subprocess.run
+      benign: 0
+      category: "Code Execution"
+      subcategory: "Process Spawning"
+    - name: subprocess.getoutput
+      benign: 0
+      category: "Code Execution"
+      subcategory: "OS Command Execution"
+    - name: pty.spawn
+      benign: 0
+      category: "Code Execution"
+      subcategory: "Process Spawning"
+    - name: pickle.loads
+      benign: 0
+      malicious: 1
+      category: "Code Execution"
+      subcategory: "Nested Pickle Execution"
+    - name: webbrowser.open
+      benign: 0
+      malicious: 1
+      category: "Network Connection"
+      subcategory: "Forced URL Access"
+    - name: requests.api.get
+      benign: 0
+      malicious: 1
+      category: "Network Connection"
+      subcategory: "Network beaconing"
+    - name: urllib.request.urlopen
+      benign: 0
+      category: "Network Connection"
+      subcategory: "Forced URL Access"
+
+    # ──────────────────────────────────────────────────────────────────────
+    #
+    #
+    #
+    - name: pydoc.importfile
+      benign: 0
+      category: "Code Execution"
+      subcategory: "Module Load from Path"
+      source: "picklecloak-dev"
+    - name: numpy.distutils.misc_util.exec_mod_from_location
+      benign: 0
+      category: "Code Execution"
+      subcategory: "Module Load from Path"
+      source: "picklecloak-dev"
+    - name: dataclasses._create_fn
+      benign: 0
+      category: "Code Execution"
+      subcategory: "Dynamic Code Execution"
+      source: "picklecloak-dev"
+    - name: pydoc._url_handler
+      benign: 0
+      category: "Code Execution"
+      subcategory: "Dynamic Code Execution"
+      source: "picklecloak-dev"
+    - name: numpy.distutils.cpuinfo.command_info
+      benign: 0
+      category: "Code Execution"
+      subcategory: "OS Command Execution"
+      source: "picklecloak-dev"
+    - name: numpy.distutils.lib2def.getnm
+      benign: 0
+      category: "Code Execution"
+      subcategory: "OS Command Execution"
+      source: "picklecloak-dev"
+    - name: numpy.f2py.f2py2e.callcrackfortran
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+      source: "picklecloak-dev"
+    - name: numpy.distutils.command.build_src.subst_vars
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+      source: "picklecloak-dev"
+    - name: numpy.core._methods._dump
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+      source: "picklecloak-dev"
+    - name: sympy.utilities._compilation.compilation._write_sources_to_build_dir
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+      source: "picklecloak-dev"
+    - name: pandas.io.formats.format._get_buffer
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+      source: "picklecloak-dev"
+    - name: uu.decode
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+      source: "picklecloak-dev"
+    - name: _pyio._open_code_with_warning
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-dev"
+    - name: doctest._load_testfile
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-dev"
+    - name: fileinput.hook_compressed
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-dev"
+    - name: numpy.compat.py3k.open_latin1
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-dev"
+    - name: numpy.f2py.crackfortran.openhook
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-dev"
+    - name: numpy.distutils.from_template.resolve_includes
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-dev"
+    - name: numpy.f2py._src_pyf.resolve_includes
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-dev"
+    - name: pandas.io.parsers.read_fwf
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-dev"
+    - name: pandas.io.common._maybe_memory_map
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-dev"
+    - name: sympy.physics.quantum.qasm.read_qasm_file
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-dev"
+    - name: sympy.utilities.pkgdata.get_resource
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-dev"
+    - name: turtle.config_dict
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-dev"
+
+    #
+    - name: joblib.numpy_pickle.dump
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+      source: "picklecloak-test"
+    - name: torch._inductor.codecache.touch
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+      source: "picklecloak-test"
+    - name: torch.cuda.memory._save_segment_usage
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+      source: "picklecloak-test"
+    - name: torch.utils.cpp_extension._maybe_write
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+      source: "picklecloak-test"
+    - name: torch.utils.collect_env.run
+      benign: 0
+      category: "Code Execution"
+      subcategory: "Process Spawning"
+      source: "picklecloak-test"
+    - name: lib2to3.refactor.RefactoringTool._read_python_source
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-test"
+    - name: lib2to3.tests.test_refactor.TestRefactoringTool.read_file
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-test"
+    - name: numpy.core.tests.test_multiarray.TestIO._check_from
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+      source: "picklecloak-test"
+    - name: tracemalloc.Snapshot.dump
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+      source: "picklecloak-test"
+      note: "Matching removes `__new__` from the qualifier because the call passes through `Snapshot.__new__(...)` (scanner._resolve_symbolic)."
+    - name: pandas.core.series.Series.to_string
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+      source: "picklecloak-test"
+      note: "Writes to an arbitrary file through the `buf=` argument."
+    - name: numpy._core._methods._dump
+      benign: 0
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+      source: "alias-of:numpy.core._methods._dump"
+
+    - name: _pydev_bundle._pydev_execfile.execfile
+      benign: 0
+      category: "Code Execution"
+      subcategory: "Dynamic Code Execution"
+      source: "stage2-fn:3-3-B-00050"
+      note: "The call executes a file directly; an argument such as 'exec_test.py' has no path signal."
+
+  combination_required:
+    - name: sys.exit
+      benign: 0
+      combination_category: "Denial of Service"
+      combination_subcategory: "Process Termination"
+      source: "stage2-fn:3-3-D-00007"
+      note: "Detect without classifying; retain only as suspicious (U-high)."
+    - name: test.support.get_attribute
+      benign: 0
+      combination_category: "Code Execution"
+      combination_subcategory: "Attribute Indirection Gadget"
+      source: "picklecloak-dev"
+    - name: unittest.mock._dot_lookup
+      benign: 0
+      combination_category: "Code Execution"
+      combination_subcategory: "Attribute Indirection Gadget"
+      source: "picklecloak-dev"
+    - name: xmlrpc.server.resolve_dotted_attribute
+      benign: 0
+      combination_category: "Code Execution"
+      combination_subcategory: "Attribute Indirection Gadget"
+      source: "picklecloak-dev"
+    - name: lib2to3.fixer_util.attr_chain
+      benign: 0
+      combination_category: "Code Execution"
+      combination_subcategory: "Attribute Indirection Gadget"
+      source: "picklecloak-dev"
+    - name: builtins.getattr
+      benign: 162
+      malicious: 0
+      combination_category: "Code Execution"
+      combination_subcategory: "Attribute Indirection Gadget"
+      note: "Observed in 80.6% of benign files; as a standalone IoC it would classify four of five files as malicious."
+    - name: operator.getitem
+      benign: 4
+      malicious: 1
+      combination_category: "Code Execution"
+      combination_subcategory: "Builtins Dictionary Gadget"
+      note: "Before normalization, zero benign observations cause incorrect standalone qualification."
+    - name: operator.attrgetter
+      benign: 0
+      combination_category: "Code Execution"
+      combination_subcategory: "Attribute Indirection Gadget"
+      note: "Unobserved, but conservatively requires combination because it is analogous to getattr."
+    - name: io.BytesIO
+      benign: 0
+      malicious: 1
+      combination_category: "Code Execution"
+      combination_subcategory: "BytesIO Load Chain"
+      note: "Named only when combined with a magic literal; standalone remains U."
+    - name: codecs.encode
+      benign: 16
+      malicious: 0
+      note: "Bytes-based serialization bypass for protocol <= 3 (design 3.1 A-1)."
+    - name: dill._dill._load_type
+      benign: 9
+      malicious: 0
+    - name: builtins.dict
+      benign: 6
+      malicious: 0
+    - name: builtins.int
+      benign: 13
+      malicious: 0
+
+# ──────────────────────────────────────────────────────────────────────────
+# ──────────────────────────────────────────────────────────────────────────
+name_role_ioc:
+  dangerous:
+    - "__builtins__"
+    - "__globals__"
+    - "__reduce__"
+    - "__class__"
+    - "__subclasses__"
+    - "__import__"
+    - "system"
+    - "popen"
+    - "eval"
+    - "exec"
+    - "compile"
+    - "spawn"
+  benign_observed:
+    - {name: forward, count: 92}
+    - {name: NO, count: 23}
+    - {name: forward_fuse, count: 18}
+    - {name: min, count: 11}
+    - {name: EPOCH, count: 8}
+
+# ──────────────────────────────────────────────────────────────────────────
+#
+#
+#
+#
+# ──────────────────────────────────────────────────────────────────────────
+gateway_promotion:
+  enabled: true
+  evidence: "known dangerous callable (Stage 2 denylist); outside the reconstruction contract"
+  naming:
+    - match: "(?:^|\\.)(?:system|popen|getoutput|getstatusoutput|command_by_line|_exec_command|_read_output|_get_command_stdout)$"
+      category: "Code Execution"
+      subcategory: "OS Command Execution"
+    - match: "(?:^|\\.)(?:spawn|Popen|run|call|check_call|check_output|runctx|runcode|execv|execve|execvp|execvpe|pipepager|tempfilepager)$"
+      category: "Code Execution"
+      subcategory: "Process Spawning"
+    - match: "(?:^|\\.)(?:eval|exec|execfile|compile|myeval|_eval_scalar|sympify|lambdify|eval_expr|_create_fn|_run_code|run_module|run_path)$"
+      category: "Code Execution"
+      subcategory: "Dynamic Code Execution"
+    - match: "(?:^|\\.)(?:__import__|import_module|safeimport|locate|_find_and_load|_get_module_from_name|_importer|get_entity|lookup)$"
+      category: "Code Execution"
+      subcategory: "Dynamic Module Import"
+    - match: "(?:^|\\.)(?:urlopen|urlretrieve|URLopener|Telnet|FTP|ServerProxy|Server)$"
+      category: "Network Connection"
+      subcategory: "Remote Resource Access"
+    - match: "(?:^|\\.)(?:save|savez|savetxt|dump|dump_stats|write|write_file|_copy_file_contents|make_script|open_w|_create_carefully|retrieve|_serialize_xml|_serialize_html|__call__)$"
+      category: "File Operation"
+      subcategory: "Arbitrary File Write"
+    - match: "(?:^|\\.)(?:load|loads|decode|read_pickle|read_csv|read_table|read_fwf|loadtxt|memmap|openfile|open|open_local_file|open_r|get_handle|get_bytes|get_file|get_data|sourcehook|parse|prepare_input_source|default_loader|resolve_includes|_url_handler)$"
+      category: "File Operation"
+      subcategory: "Arbitrary File Read"
+  fallback:
+    category: "Code Execution"
+    subcategory: "Known Dangerous Callable"
