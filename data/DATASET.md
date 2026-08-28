@@ -10,7 +10,7 @@ The 663 model-serialization samples are hosted externally (they are several GB a
 
 ## Download
 
-> **DOI / URLs:** _to be filled in when the dataset archive is published_
+> [Download Link to Zenodo](https://doi.org/10.5281/zenodo.22144637)
 
 The archive extracts into a directory that contains `data/<origin>/<sample_id>.<ext>`, matching the `path` column of the ledger. Benign and malicious samples are split into separate archives; the malicious archive is clearly marked.
 
